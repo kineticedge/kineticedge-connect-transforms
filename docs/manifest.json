@@ -1,0 +1,48 @@
+{
+  "name": "@name@",
+  "version": "@version@",
+  "title": "KineticEdge Kafka Connector SMTs",
+  "description": "",
+  "owner": {
+    "username": "Kinetic Edge",
+    "name": "",
+    "type": "",
+    "url": ""
+  },
+  "support": {
+    "provider_name": "",
+    "summary": "",
+    "url": ""
+  },
+  "tags": [
+    "grpc"
+  ],
+  "requirements": [
+    ""
+  ],
+  "features": {
+    "confluent_control_center_integration": false,
+    "delivery_guarantee": [
+      "at_least_once"
+    ],
+    "kafka_connect_api": true,
+    "single_message_transforms": true,
+    "supported_encodings": [
+      "any"
+    ]
+  },
+  "logo": "",
+  "docker_image": {},
+  "license": [
+    {
+      "name": "",
+      "url": ""
+    }
+  ],
+  "component_types": [
+    "transforms"
+  ],
+  "release_date": "2023-02-01"
+}
+
+

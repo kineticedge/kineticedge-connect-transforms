@@ -1,0 +1,111 @@
+import org.apache.tools.ant.filters.ReplaceTokens
+
+plugins {
+    id 'java'
+    id 'idea'
+    id 'jacoco'
+    id 'distribution'
+    id 'maven-publish'
+}
+
+repositories {
+    mavenCentral()
+    mavenLocal()
+    maven {
+        url "https://packages.confluent.io/maven/"
+    }
+}
+
+processResources {
+    with copySpec {
+        from 'src/main/resources'
+        duplicatesStrategy = 'include'
+        filter(ReplaceTokens, tokens: ['version': project.version])
+    }
+}
+
+
+dependencies {
+
+    compileOnly group: 'org.apache.kafka', name: 'connect-api', version: kafka_version
+    compileOnly group: 'org.apache.kafka', name: 'connect-transforms', version: kafka_version
+    compileOnly group: 'org.slf4j', name: 'slf4j-api', version: slf4j_version
+
+    testImplementation  group: 'org.junit.jupiter', name: 'junit-jupiter-engine', version: junit_version
+
+//    //this is needed on CP-7.0.1 deployed servers (https://github.com/camunda-community-hub/kafka-connect-zeebe/issues/81)
+//    runtimeOnly group: 'io.netty', name: 'netty-transport-classes-epoll', version: netty_version
+}
+
+jacoco {
+    toolVersion = "0.8.8"
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
+}
+
+test {
+    useJUnitPlatform()
+}
+
+jacocoTestReport {
+    reports {
+        xml.required = false
+        csv.required = false
+        html.destination file("${buildDir}/reports/jacoco/html")
+    }
+}
+
+distributions {
+    main {
+        contents {
+            from("docs/manifest.json") {
+                //filter { line -> line.toUpperCase() }
+                filter(ReplaceTokens, tokens: [
+                        name   : "${project.name}" as String,
+                        version: "${project.version}" as String
+                ]
+                )
+            }
+            into("doc/") {
+                from(project.projectDir) {
+                    include("LICENSE*")
+                    include("README*")
+                    include("NOTICE*")
+                }
+                from("${project.projectDir}/docs") {
+                    include("*.png")
+                }
+            }
+            into("etc/") {
+                from("etc")
+            }
+            into("assets/") {
+            }
+            into("lib/") {
+                from(jar)
+                from(configurations.runtimeClasspath)
+            }
+        }
+    }
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId = 'io.kineticedge'
+            artifactId = 'kineticedge-connect-smt'
+            version = '1.0.0'
+            from components.java
+        }
+    }
+}
+
+
+// processTestIntegrationResources needs this
+tasks.withType(Copy).all {
+    duplicatesStrategy 'exclude'
+}
+

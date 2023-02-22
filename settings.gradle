@@ -1,0 +1,10 @@
+
+rootProject.name = 'kineticedge-connect-smt'
+
+buildscript {
+	repositories {
+		mavenCentral()
+	}
+	dependencies {
+	}
+}
