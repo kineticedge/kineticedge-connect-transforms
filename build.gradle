@@ -35,6 +35,10 @@ dependencies {
 
 //    //this is needed on CP-7.0.1 deployed servers (https://github.com/camunda-community-hub/kafka-connect-zeebe/issues/81)
 //    runtimeOnly group: 'io.netty', name: 'netty-transport-classes-epoll', version: netty_version
+
+    testImplementation group: 'org.apache.kafka', name: 'connect-api', version: kafka_version
+    testImplementation group: 'org.apache.kafka', name: 'connect-transforms', version: kafka_version
+
 }
 
 jacoco {

@@ -38,7 +38,6 @@ import static org.apache.kafka.connect.transforms.util.Requirements.requireStruc
 
 /**
  *
- *
  */
 public abstract class Trim<R extends ConnectRecord<R>> implements Transformation<R> {
 
@@ -65,8 +64,7 @@ public abstract class Trim<R extends ConnectRecord<R>> implements Transformation
                     null,
                     null,
                     ConfigDef.Importance.HIGH,
-                    "list of fields to trim")
-            ;
+                    "list of fields to trim");
 
     private static final String PURPOSE = "trim strings";
 
@@ -114,16 +112,18 @@ public abstract class Trim<R extends ConnectRecord<R>> implements Transformation
         switch (mode) {
             case list:
                 for (String field : fields) {
-                    trimField(value, field);
+                    trimMapElement(value, field);
                 }
                 break;
             case top:
-                for (String field : value.keySet()) {
-                    trimField(value, field);
-                }
+                for (String fieldName : value.keySet()) {
+                    Object v = value.get(fieldName);
+                    if (v instanceof String) {
+                        value.put(fieldName, ((String) v).trim());
+                    }                }
                 break;
             case all:
-                trimAll(value);
+                trimMap(value);
                 break;
         }
 
@@ -137,42 +137,71 @@ public abstract class Trim<R extends ConnectRecord<R>> implements Transformation
         switch (mode) {
             case list:
                 for (String field : fields) {
-                    trimField(value, field);
+                    trimStructField(value, field);
                 }
                 break;
             case top:
                 for (Field field : value.schema().fields()) {
-                    trimField(value, field.name());
+                    trimStructField(value, field.name());
                 }
                 break;
             case all:
-                trimAll(value);
+                trimStruct(value);
                 break;
         }
 
         return record;
     }
 
-    @SuppressWarnings("unchecked")
-    private static void trimAll(final Map<String, Object> map) {
+    private static void trimMap(final Map<String, Object> map) {
+        if (map == null) {
+            return;
+        }
+
         for (String field : map.keySet()) {
-            if (map.get(field) instanceof String) {
-                String value = (String) map.get(field);
-                map.put(field, value.trim());
-            } else if (map.get(field) instanceof Map) {
-                Map<String, Object> value = (Map<String, Object>) map.get(field);
-                trimAll(value);
+            trimMapElement(map, field);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void trimList(final List<Object> list) {
+        if (list == null) {
+            return;
+        }
+
+        for (Object element : list) {
+            if (element instanceof List) {
+                trimList((List<Object>) element);
+            } else if (element instanceof Map) {
+                trimMap((Map<String, Object>) element);
             }
         }
     }
 
-    private static void trimField(final Map<String, Object> map, final String fieldName) {
-        if (map.get(fieldName) instanceof String) {
-            map.put(fieldName, ((String) map.get(fieldName)).trim());
+    @SuppressWarnings("unchecked")
+    private static void trimMapElement(final Map<String, Object> map, final String fieldName) {
+
+        final Object value = map.get(fieldName);
+
+        if (value instanceof String) {
+            map.put(fieldName, ((String) value).trim());
+        } else if (value instanceof Map) {
+            trimMap((Map) value);
+        } else if (value instanceof List) {
+            for (Object element : ((List) value)) {
+                if (element instanceof List) {
+                    trimList((List<Object>) element);
+                } else if (element instanceof Map) {
+                    trimMap((Map<String, Object>) element);
+                } else if (element instanceof String) {
+                    // NOT SUPPORTED.
+                }
+            }
         }
     }
 
-    private static void trimAll(final Struct struct) {
+
+    private static void trimStruct(final Struct struct) {
 
         if (struct == null) {
             return;
@@ -185,7 +214,7 @@ public abstract class Trim<R extends ConnectRecord<R>> implements Transformation
                     struct.put(field.name(), value.trim());
                 }
             } else if (field.schema().type() == Schema.Type.STRUCT) {
-                trimAll(struct.getStruct(field.name()));
+                trimStruct(struct.getStruct(field.name()));
             } else if (field.schema().type() == Schema.Type.ARRAY) {
                 if (field.schema().valueSchema().type() == Schema.Type.STRING) {
                     log.warn("an array of strings is not trimmed.");
@@ -193,18 +222,19 @@ public abstract class Trim<R extends ConnectRecord<R>> implements Transformation
                     List<Object> list = struct.getArray(field.name());
                     if (list != null) {
                         for (Object object : list) {
-                            trimAll((Struct) object);
+                            trimStruct((Struct) object);
                         }
                     }
                 }
             } else if (field.schema().type() == Schema.Type.MAP) {
+
                 log.warn("structure has Map elements which currently are not searched in this transformer.");
             }
 
         }
     }
 
-    private static void trimField(final Struct struct, final String fieldName) {
+    private static void trimStructField(final Struct struct, final String fieldName) {
         final Field field = struct.schema().field(fieldName);
         if (field != null && field.schema().type() == Schema.Type.STRING) {
             if (struct.get(fieldName) instanceof String) {
